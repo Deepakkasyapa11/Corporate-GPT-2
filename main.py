@@ -98,7 +98,7 @@ def load_llm_model_cpu():
 def load_llm_model_gpu(gpu_id:int ):
     llm = HuggingFacePipeline.from_model_id(model_id= 'lmsys/fastchat-t5-3b-v1.0', 
                                             task= 'text2text-generation',
-                                            # device=gpu_id,
+                                            device=gpu_id,
                                             model_kwargs={ 
                                                 # "device_map": "auto",
                                                         # "load_in_8bit": True,
@@ -220,12 +220,30 @@ def main():
     # Now prepare model
 
     # MODEL = load_model(model_name=MODEL_NAME, stage=STAGE, cache_folder=CACHE_FOLDER)
+    print("started load_scraped_web_info")
     load_scraped_web_info()
+    print("finished load_scraped_web_info")
+
+    print("started load_embedding_model")
     embedding_model = load_embedding_model()
+    print("finished load_embedding_model")
+
+    print("started load_faiss_index")
     vector_database = load_faiss_index()
-    llm_model = load_llm_model_cpu()
+    print("finished load_faiss_index")
+
+    print("started load_llm_model_gpu")
+    llm_model = load_llm_model_gpu(0)
+    print("finished load_llm_model_gpu")
+    
+    # llm_model = load_llm_model_cpu()
+    print("started load_retriever")
     qa_retriever = load_retriever(llm= llm_model, db= vector_database)
+    print("finished load_retriever")
+    
+    print("started load_conversational_qa_memory_retriever")
     conversational_qa_memory_retriever, question_generator = load_conversational_qa_memory_retriever()
+    print("finished load_conversational_qa_memory_retriever")
 
     # init FastAPI
     app = create_app()

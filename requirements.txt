@@ -1,5 +1,5 @@
 accelerate
-faiss-cpu
+faiss-gpu
 sentence-transformers
 InstructorEmbedding
 huggingface
