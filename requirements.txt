@@ -1,0 +1,13 @@
+accelerate
+faiss-cpu
+sentence-transformers
+InstructorEmbedding
+huggingface
+transformers
+python-multipart
+torch
+langchain
+uvicorn
+fastapi
+pyyaml
+tqdm
