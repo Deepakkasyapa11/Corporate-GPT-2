@@ -76,7 +76,7 @@ def load_scraped_web_info():
 
 def load_embedding_model():
     embedding_model = HuggingFaceInstructEmbeddings(model_name='hkunlp/instructor-base',
-                                                    cache_folder='/root/.cache',
+                                                    cache_folder='./.cache',
                                                 # model_kwargs = {'device': torch.device('cuda' if torch.cuda.is_available() else 'cpu')}
                                                 )
     return embedding_model
@@ -215,7 +215,7 @@ def create_app():
 def main():
     global embedding_model, vector_database, llm_model, qa_retriever, conversational_qa_memory_retriever, question_generator
     # Init Logger
-    init_logger(name="main", filename="main", path="/root/logs/", level=logging.DEBUG)
+    init_logger(name="main", filename="main", path="./logs/", level=logging.DEBUG)
     logger = logging.getLogger(name="main")
     # Now prepare model
 
@@ -233,7 +233,7 @@ def main():
     print("finished load_faiss_index")
 
     print("started load_llm_model_gpu")
-    llm_model = load_llm_model_gpu(0)
+    llm_model = load_llm_model_cpu()
     print("finished load_llm_model_gpu")
     
     # llm_model = load_llm_model_cpu()
@@ -258,6 +258,6 @@ if __name__ == '__main__':
     # Which is not the same port as the production port (80).
     # This is mainly for development purpose.
     # So you don't need traefik to access the API.
-    uvicorn.run(app="main:main", host="0.0.0.0", port=8080, workers=1, reload=True)
+    uvicorn.run(app="main:main", host="0.0.0.0", port=8080, workers=1)
     # Remember that FastAPI provides an interface to test out your API
     # http://localhost:9000/docs
