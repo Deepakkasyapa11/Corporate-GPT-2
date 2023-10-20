@@ -29,6 +29,11 @@ from langchain.chains import LLMChain
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.question_answering import load_qa_chain
 from langchain.chains.conversational_retrieval.prompts import CONDENSE_QUESTION_PROMPT
+from transformers import BitsAndBytesConfig
+
+import os
+os.environ['http_proxy'] = 'http://192.41.170.23:3128'
+os.environ['https_proxy'] = 'http://192.41.170.23:3128'
 
 # A bunch of global variable
 MODEL_NAME:str = "mlflow-example"
@@ -41,6 +46,16 @@ llm_model:LLM
 qa_retriever:BaseRetrievalQA
 conversational_qa_memory_retriever:ConversationalRetrievalChain
 question_generator:LLMChain
+
+device="cuda:0"
+device_id=1
+
+nf4_config = BitsAndBytesConfig(
+   load_in_4bit=True,
+   bnb_4bit_quant_type="nf4",
+   bnb_4bit_use_double_quant=True,
+   bnb_4bit_compute_dtype=torch.bfloat16
+)
 
 prompt_template = """
 You are the chatbot and the face of Asian Institute of Technology (AIT). Your job is to give answers to prospective and current students about the school.
@@ -77,7 +92,7 @@ def load_scraped_web_info():
 def load_embedding_model():
     embedding_model = HuggingFaceInstructEmbeddings(model_name='hkunlp/instructor-base',
                                                     cache_folder='./.cache',
-                                                # model_kwargs = {'device': torch.device('cuda' if torch.cuda.is_available() else 'cpu')}
+                                                model_kwargs = {'device': torch.device(device)}
                                                 )
     return embedding_model
 
@@ -98,16 +113,34 @@ def load_llm_model_cpu():
 def load_llm_model_gpu(gpu_id:int ):
     llm = HuggingFacePipeline.from_model_id(model_id= 'lmsys/fastchat-t5-3b-v1.0', 
                                             task= 'text2text-generation',
-                                            device=gpu_id,
+                                            device=device_id,
+                                            quantization_config=nf4_config,
                                             model_kwargs={ 
-                                                # "device_map": "auto",
+                                                "device_map": "auto",
                                                         # "load_in_8bit": True,
                                                         "max_length": 256, 
-                                                        "offload_folder": "offload",
                                                         "temperature": 0,
                                                         "repetition_penalty": 1.5},
                                             )
 
+    return llm
+
+def load_alpaca():
+    # Load model directly
+    from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
+    # tokenizer = AutoTokenizer.from_pretrained("declare-lab/flan-alpaca-gpt4-xl")
+    # model = AutoModelForSeq2SeqLM.from_pretrained("declare-lab/flan-alpaca-gpt4-xl")
+    llm = HuggingFacePipeline.from_model_id(model_id= 'declare-lab/flan-alpaca-gpt4-xl', 
+                                            task= 'text2text-generation',
+                                            device=device_id,
+                                            model_kwargs={ 
+                                                "device_map": "auto",
+                                                "quantization_config": nf4_config,
+                                                        "max_length": 256, 
+                                                        "temperature": 0,
+                                                        "repetition_penalty": 1.5},
+                                            )
     return llm
 
 def load_conversational_qa_memory_retriever():
@@ -250,14 +283,15 @@ def main():
     logger.info("Start API")
     return app
 
-if __name__ == '__main__':
-    # We use main() as a wrap function to spawn FastAPI app
-    app = main()
-    # If you run this file with `python3 main.py`.
-    # this section will run. Thus, a Uvicorn sever spawns in the port 8080.
-    # Which is not the same port as the production port (80).
-    # This is mainly for development purpose.
-    # So you don't need traefik to access the API.
-    uvicorn.run(app="main:main", host="0.0.0.0", port=8080, workers=1)
-    # Remember that FastAPI provides an interface to test out your API
-    # http://localhost:9000/docs
+app = main()
+# if __name__ == '__main__':
+#     # We use main() as a wrap function to spawn FastAPI app
+#     app = main()
+#     # If you run this file with `python3 main.py`.
+#     # this section will run. Thus, a Uvicorn sever spawns in the port 8080.
+#     # Which is not the same port as the production port (80).
+#     # This is mainly for development purpose.
+#     # So you don't need traefik to access the API.
+#     # uvicorn.run(app="main:main", host="0.0.0.0", port=8080, workers=1)
+#     # Remember that FastAPI provides an interface to test out your API
+#     # http://localhost:9000/docs
