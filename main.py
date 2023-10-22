@@ -75,6 +75,8 @@ PROMPT = PromptTemplate(
 )
 chain_type_kwargs = {"prompt": PROMPT}
 
+router = APIRouter(prefix="")
+
 def load_scraped_web_info():
     with open("ait-web-document", "rb") as fp:
         ait_web_documents = pickle.load(fp)
@@ -230,6 +232,49 @@ def retrieve_answer(my_text_input:str):
 
     return answer #this positional slicing helps remove "<pad> " at the beginning
 
+@router.get("/")
+def get_root():
+    return {"name": "brainlab-fastapi-example"}
+
+@router.get("/q")
+def get_root(text: str):
+    return retrieve_answer(text)
+
+@router.get("/load_model")
+def get_model(text: str):
+    global llm_model, qa_retriever, vector_database
+    if text == "fast_chat":
+        llm_model = load_llm_model_gpu(0)
+    elif text == "alpaca":
+        llm_model = load_alpaca()
+    elif text == "llama":
+        llm_model = load_llm_model_gpu()
+    
+    qa_retriever = load_retriever(llm= llm_model, db= vector_database)
+    
+    return "loaded"
+
+@router.post("/predict/")
+async def create_upload_file(file: UploadFile):
+
+    return ""
+
+def create_app():
+    app = FastAPI()
+    app.include_router(router)
+
+    origins = [
+        "*",
+    ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    return app
+
 def main():
     global embedding_model, vector_database, llm_model, qa_retriever, conversational_qa_memory_retriever, question_generator
     # Init Logger
@@ -252,9 +297,9 @@ def main():
     qa_retriever = load_retriever(llm= llm_model, db= vector_database)
     print("finished load_retriever")
     
-    print("started load_conversational_qa_memory_retriever")
-    conversational_qa_memory_retriever, question_generator = load_conversational_qa_memory_retriever()
-    print("finished load_conversational_qa_memory_retriever")
+    # print("started load_conversational_qa_memory_retriever")
+    # conversational_qa_memory_retriever, question_generator = load_conversational_qa_memory_retriever()
+    # print("finished load_conversational_qa_memory_retriever")
 
     # init FastAPI
     app = create_app()
