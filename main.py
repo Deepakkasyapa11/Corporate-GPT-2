@@ -29,11 +29,11 @@ from langchain.chains import LLMChain
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.question_answering import load_qa_chain
 from langchain.chains.conversational_retrieval.prompts import CONDENSE_QUESTION_PROMPT
-from transformers import BitsAndBytesConfig
+# from transformers import BitsAndBytesConfig
 
 import os
-os.environ['http_proxy'] = 'http://192.41.170.23:3128'
-os.environ['https_proxy'] = 'http://192.41.170.23:3128'
+# os.environ['http_proxy'] = 'http://192.41.170.23:3128'
+# os.environ['https_proxy'] = 'http://192.41.170.23:3128'
 
 # A bunch of global variable
 MODEL_NAME:str = "mlflow-example"
@@ -47,6 +47,7 @@ qa_retriever:BaseRetrievalQA
 conversational_qa_memory_retriever:ConversationalRetrievalChain
 question_generator:LLMChain
 
+OPENAI_API_KEY = "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"
 device="cuda:0"
 device_id=1
 
@@ -56,6 +57,7 @@ nf4_config = BitsAndBytesConfig(
    bnb_4bit_use_double_quant=True,
    bnb_4bit_compute_dtype=torch.bfloat16
 )
+
 
 prompt_template = """
 You are the chatbot and the face of Asian Institute of Technology (AIT). Your job is to give answers to prospective and current students about the school.
@@ -72,8 +74,6 @@ PROMPT = PromptTemplate(
     template=prompt_template, input_variables=["context", "question"]
 )
 chain_type_kwargs = {"prompt": PROMPT}
-
-router = APIRouter(prefix="")
 
 def load_scraped_web_info():
     with open("ait-web-document", "rb") as fp:
@@ -103,21 +103,24 @@ def load_faiss_index():
 
 def load_llm_model_cpu():
     llm = HuggingFacePipeline.from_model_id(model_id= 'lmsys/fastchat-t5-3b-v1.0', 
-                            task= 'text2text-generation',        
-                            model_kwargs={ "max_length": 256, "temperature": 0,
+                            task= 'text2text-generation',     
+                            # device=device_id,
+                            model_kwargs={ "max_length": 256, 
+                                              "temperature": 0,
+                                            # "quantization_config": nf4_config,
                                             "torch_dtype":torch.float32,
                                         "repetition_penalty": 1.3})
 
     return llm
 
-def load_llm_model_gpu(gpu_id:int ):
+def load_llm_model_gpu(gpu_id:int):
     llm = HuggingFacePipeline.from_model_id(model_id= 'lmsys/fastchat-t5-3b-v1.0', 
                                             task= 'text2text-generation',
-                                            device=device_id,
-                                            quantization_config=nf4_config,
+                                            # device= device_id,
                                             model_kwargs={ 
-                                                "device_map": "auto",
+                                                        "device_map": "auto",
                                                         # "load_in_8bit": True,
+                                                        "quantization_config": nf4_config,
                                                         "max_length": 256, 
                                                         "temperature": 0,
                                                         "repetition_penalty": 1.5},
@@ -128,20 +131,55 @@ def load_llm_model_gpu(gpu_id:int ):
 def load_alpaca():
     # Load model directly
     from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-
+    
     # tokenizer = AutoTokenizer.from_pretrained("declare-lab/flan-alpaca-gpt4-xl")
     # model = AutoModelForSeq2SeqLM.from_pretrained("declare-lab/flan-alpaca-gpt4-xl")
+    if (device == 'cpu'):
+      model_kwargs =  { 
+        "max_length": 256, 
+        "temperature": 0,
+        "repetition_penalty": 1.5}
+        
+    else:
+       model_kwargs = { 
+           "device_map": "auto",
+           "quantization_config": nf4_config,
+            "max_length": 256, 
+            "temperature": 0,
+            "repetition_penalty": 1.5}
+    
     llm = HuggingFacePipeline.from_model_id(model_id= 'declare-lab/flan-alpaca-gpt4-xl', 
                                             task= 'text2text-generation',
-                                            device=device_id,
+                                            # device=device,
+                                            model_kwargs=model_kwargs,
+                                            )
+    return llm
+
+def load_llama_chat():
+
+    
+    
+    llm = HuggingFacePipeline.from_model_id(model_id= 'TheBloke/falcon-40b-instruct-GPTQ', 
+                                            task= 'text2text-generation',
+                                            # device=device,
                                             model_kwargs={ 
-                                                "device_map": "auto",
-                                                "quantization_config": nf4_config,
+                                                "trust_remote_code":True,
+                                                       # "device_map": "auto",
+                                                       # "quantization_config": nf4_config,
                                                         "max_length": 256, 
                                                         "temperature": 0,
                                                         "repetition_penalty": 1.5},
                                             )
     return llm
+
+
+
+
+
+def load_openai(): 
+    llm = OpenAI(openai_api_key=OPENAI_API_KEY, openai_organization="org-R2BXQXBkfJlmRR0P5E2w8ULa")    
+    return llm
+    
 
 def load_conversational_qa_memory_retriever():
     global vector_database, llm_model
@@ -190,60 +228,7 @@ def retrieve_answer(my_text_input:str):
 
     # st.session_state.my_text_input = ""
 
-    return answer[6:] #this positional slicing helps remove "<pad> " at the beginning
-
-
-def new_retrieve_answer(my_text_input:str):
-    global conversational_qa_memory_retriever
-    prompt_answer=  my_text_input + ". Try to be elaborate and informative in your answer."
-    answer = conversational_qa_memory_retriever({"question": prompt_answer, })
-    log = {"timestamp": datetime.datetime.now(),
-        "question":my_text_input,
-        "generated_answer": answer['answer'][6:],
-        "rating":0 }
-
-    print(f"condensed quesion : {question_generator.run({'chat_history': answer['chat_history'], 'question' : prompt_answer})}")
-
-    print(answer["chat_history"])
-
-    # TODO: change below code and maintain in session
-    # st.session_state.history.append(log)
-    # update_worksheet_qa()
-    # st.session_state.chat_history.append({"message": st.session_state.my_text_input, "is_user": True})
-    # st.session_state.chat_history.append({"message": answer['answer'][6:] , "is_user": False})
-
-    # st.session_state.my_text_input = ""
-
-    return answer['answer'][6:] #this positional slicing helps remove "<pad> " at the beginning
-
-@router.get("/")
-def get_root():
-    return {"name": "brainlab-fastapi-example"}
-
-@router.get("/q")
-def get_root(text: str):
-    return retrieve_answer(text)
-
-@router.post("/predict/")
-async def create_upload_file(file: UploadFile):
-
-    return ""
-
-def create_app():
-    app = FastAPI()
-    app.include_router(router)
-
-    origins = [
-        "*",
-    ]
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    return app
+    return answer #this positional slicing helps remove "<pad> " at the beginning
 
 def main():
     global embedding_model, vector_database, llm_model, qa_retriever, conversational_qa_memory_retriever, question_generator
@@ -253,21 +238,14 @@ def main():
     # Now prepare model
 
     # MODEL = load_model(model_name=MODEL_NAME, stage=STAGE, cache_folder=CACHE_FOLDER)
-    print("started load_scraped_web_info")
     load_scraped_web_info()
-    print("finished load_scraped_web_info")
-
-    print("started load_embedding_model")
     embedding_model = load_embedding_model()
-    print("finished load_embedding_model")
-
-    print("started load_faiss_index")
     vector_database = load_faiss_index()
-    print("finished load_faiss_index")
-
-    print("started load_llm_model_gpu")
-    llm_model = load_llm_model_cpu()
-    print("finished load_llm_model_gpu")
+    # llm_model = load_llm_model_cpu()
+    # llm_model = load_llm_model_gpu(0)
+    # llm_model = load_alpaca()
+    # llm_model = load_openai()
+    llm_model = load_alpaca()
     
     # llm_model = load_llm_model_cpu()
     print("started load_retriever")
