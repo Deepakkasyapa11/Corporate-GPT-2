@@ -29,11 +29,11 @@ from langchain.chains import LLMChain
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.question_answering import load_qa_chain
 from langchain.chains.conversational_retrieval.prompts import CONDENSE_QUESTION_PROMPT
-# from transformers import BitsAndBytesConfig
+from transformers import BitsAndBytesConfig
 
 import os
-# os.environ['http_proxy'] = 'http://192.41.170.23:3128'
-# os.environ['https_proxy'] = 'http://192.41.170.23:3128'
+os.environ['http_proxy'] = 'http://192.41.170.23:3128'
+os.environ['https_proxy'] = 'http://192.41.170.23:3128'
 
 # A bunch of global variable
 MODEL_NAME:str = "mlflow-example"
