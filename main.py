@@ -249,6 +249,8 @@ def get_model(text: str):
         llm_model = load_alpaca()
     elif text == "llama":
         llm_model = load_llm_model_gpu()
+    elif text == "openai":
+        llm_model = load_openai()
     
     qa_retriever = load_retriever(llm= llm_model, db= vector_database)
     
