@@ -29,11 +29,11 @@ from langchain.chains import LLMChain
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.question_answering import load_qa_chain
 from langchain.chains.conversational_retrieval.prompts import CONDENSE_QUESTION_PROMPT
-from transformers import BitsAndBytesConfig
+# from transformers import BitsAndBytesConfig
 
 import os
-os.environ['http_proxy'] = 'http://192.41.170.23:3128'
-os.environ['https_proxy'] = 'http://192.41.170.23:3128'
+# os.environ['http_proxy'] = 'http://192.41.170.23:3128'
+# os.environ['https_proxy'] = 'http://192.41.170.23:3128'
 
 # A bunch of global variable
 MODEL_NAME:str = "mlflow-example"
@@ -51,12 +51,12 @@ OPENAI_API_KEY = "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"
 device="cuda:0"
 device_id=1
 
-nf4_config = BitsAndBytesConfig(
-   load_in_4bit=True,
-   bnb_4bit_quant_type="nf4",
-   bnb_4bit_use_double_quant=True,
-   bnb_4bit_compute_dtype=torch.bfloat16
-)
+# nf4_config = BitsAndBytesConfig(
+#    load_in_4bit=True,
+#    bnb_4bit_quant_type="nf4",
+#    bnb_4bit_use_double_quant=True,
+#    bnb_4bit_compute_dtype=torch.bfloat16
+# )
 
 
 prompt_template = """
@@ -120,9 +120,9 @@ def load_llm_model_gpu(gpu_id:int):
                                             task= 'text2text-generation',
                                             # device= device_id,
                                             model_kwargs={ 
-                                                        "device_map": "auto",
+                                                        # "device_map": "auto",
                                                         # "load_in_8bit": True,
-                                                        "quantization_config": nf4_config,
+                                                        # "quantization_config": nf4_config,
                                                         "max_length": 256, 
                                                         "temperature": 0,
                                                         "repetition_penalty": 1.5},
@@ -144,8 +144,8 @@ def load_alpaca():
         
     else:
        model_kwargs = { 
-           "device_map": "auto",
-           "quantization_config": nf4_config,
+        #    "device_map": "auto",
+        #    "quantization_config": nf4_config,
             "max_length": 256, 
             "temperature": 0,
             "repetition_penalty": 1.5}
@@ -248,7 +248,7 @@ def get_model(text: str):
     elif text == "alpaca":
         llm_model = load_alpaca()
     elif text == "llama":
-        llm_model = load_llm_model_gpu()
+        llm_model = load_llm_model_gpu(0)
     elif text == "openai":
         llm_model = load_openai()
     
