@@ -243,13 +243,13 @@ def get_root(text: str):
 @router.get("/load_model")
 def get_model(text: str):
     global llm_model, qa_retriever, vector_database
-    if text == "fast_chat":
+    if text == "FastChatT5":
         llm_model = load_llm_model_gpu(0)
-    elif text == "alpaca":
+    elif text == "Alpaca-2-7b":
         llm_model = load_alpaca()
-    elif text == "llama":
+    elif text == "llama-2-7b-chat":
         llm_model = load_llm_model_gpu(0)
-    elif text == "openai":
+    elif text == "GPT":
         llm_model = load_openai()
     
     qa_retriever = load_retriever(llm= llm_model, db= vector_database)
