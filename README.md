@@ -1,5 +1,5 @@
 # AIT-GPT-2
-Our project aims to develop a powerful large language model, which will act as an intelligent chat bot system designed to cater to the requirements of the academic community. The below objectives are: 
+This project aims to develop a powerful large language model, which will act as an intelligent chat bot system designed to cater to the requirements of the academic community. The below objectives are: 
 
 1. To identify the deep learning model to be applied in the proposed system.
 
