@@ -4,7 +4,7 @@ sentence-transformers==2.2.2
 InstructorEmbedding==1.0.1
 huggingface==0.0.1
 huggingface-hub==0.17.1
-transformers==4.33.2
+transformers==4.36.0
 python-multipart==0.0.6
 torch==2.1.0+cu121
 langchain==0.0.292
